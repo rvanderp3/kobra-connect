@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -165,6 +166,45 @@ class Toolhead:
         }
 
 
+class TemperatureStore:
+    """Ring-buffer of temperature readings for Moonraker's temperature_store.
+
+    Moonraker format per sensor:
+    { "temperatures": [...], "targets": [...], "powers": [...] }
+    Each entry is [timestamp, value].
+    """
+
+    MAXLEN = 1200  # ~20 min at 1 Hz
+
+    def __init__(self) -> None:
+        self.extruder_temps: deque[list] = deque(maxlen=self.MAXLEN)
+        self.extruder_targets: deque[list] = deque(maxlen=self.MAXLEN)
+        self.bed_temps: deque[list] = deque(maxlen=self.MAXLEN)
+        self.bed_targets: deque[list] = deque(maxlen=self.MAXLEN)
+
+    def append(self, extruder_temp: float, extruder_target: float,
+               bed_temp: float, bed_target: float) -> None:
+        ts = time.time()
+        self.extruder_temps.append([ts, extruder_temp])
+        self.extruder_targets.append([ts, extruder_target])
+        self.bed_temps.append([ts, bed_temp])
+        self.bed_targets.append([ts, bed_target])
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "extruder": {
+                "temperatures": list(self.extruder_temps),
+                "targets": list(self.extruder_targets),
+                "powers": [],
+            },
+            "heater_bed": {
+                "temperatures": list(self.bed_temps),
+                "targets": list(self.bed_targets),
+                "powers": [],
+            },
+        }
+
+
 class MoonrakerState:
     """Aggregates all printer object states and builds Moonraker query responses."""
 
@@ -176,6 +216,7 @@ class MoonrakerState:
         self.webhooks = Webhooks()
         self.gcode_move = GcodeMove()
         self.toolhead = Toolhead()
+        self.temperature_store = TemperatureStore()
         self._frozen_total_duration: float = 0.0
         self._frozen_filename: str = ""
 
@@ -283,6 +324,10 @@ class MoonrakerState:
         self.extruder.target = temp.target_nozzle
         self.heater_bed.temperature = temp.curr_bed
         self.heater_bed.target = temp.target_bed
+        self.temperature_store.append(
+            temp.curr_nozzle, temp.target_nozzle,
+            temp.curr_bed, temp.target_bed,
+        )
 
     def to_query_result(self, objects: dict[str, Any]) -> dict[str, Any]:
         """Build printer.objects.query response."""

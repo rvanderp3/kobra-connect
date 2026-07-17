@@ -17,6 +17,8 @@ from .handshake import HandshakeError, do_handshake
 from .models import FanSpeed, HandshakeResult, PrinterInfo, Temperature
 
 _PREFIX = "anycubic/anycubicCloud/v1"
+_SLICER_PREFIX = f"{_PREFIX}/slicer/printer"
+_WEB_PREFIX = f"{_PREFIX}/web/printer"
 
 OnReport = Callable[[str, dict], None]
 
@@ -164,6 +166,101 @@ class KobraClient:
         """Block and process MQTT messages forever."""
         if self._client:
             self._client.loop_forever()
+
+    # -- commands (fire-and-forget) ------------------------------------------
+
+    def send_command(self, msg_type: str, action: str, data: dict | None = None) -> str:
+        """Send a command to the Kobra and return the msgid. Does not wait for response."""
+        if not self._client or not self._hs:
+            raise HandshakeError("Not connected — call connect() first")
+
+        topic = f"{_SLICER_PREFIX}/{self._hs.model_id}/{self._hs.device_id}/{msg_type}"
+        msgid = uuid.uuid4().hex
+        body = json.dumps({
+            "type": msg_type,
+            "action": action,
+            "timestamp": int(time.time() * 1000),
+            "msgid": msgid,
+            "data": data or {},
+        })
+        self._client.publish(topic, body)
+        return msgid
+
+    def command_pause(self) -> str:
+        """Pause the current print."""
+        return self.send_command("print", "pause", {"taskid": "-1"})
+
+    def command_resume(self) -> str:
+        """Resume the current print."""
+        return self.send_command("print", "resume", {"taskid": "-1"})
+
+    def command_cancel(self) -> str:
+        """Cancel/stop the current print."""
+        return self.send_command("print", "stop", {"taskid": "-1"})
+
+    def command_start_print(self, filename: str) -> str:
+        """Start printing a file on the printer."""
+        return self.send_command("print", "start", {
+            "filename": filename,
+            "filetype": 1,
+            "taskid": "-1",
+        })
+
+    def command_set_temperature(self, nozzle: float | None = None, bed: float | None = None) -> str:
+        """Set nozzle and/or bed temperature."""
+        settings: dict[str, Any] = {}
+        if nozzle is not None:
+            settings["target_nozzle_temp"] = int(nozzle)
+        if bed is not None:
+            settings["target_hotbed_temp"] = int(bed)
+        return self.send_command("print", "update", {"settings": settings, "taskid": "-1"})
+
+    def command_set_fan(self, speed_pct: int) -> str:
+        """Set part cooling fan speed (0-100)."""
+        return self.send_command("print", "update", {
+            "settings": {"fan_speed_pct": max(0, min(100, speed_pct))},
+            "taskid": "-1",
+        })
+
+    def command_set_speed_mode(self, mode: int) -> str:
+        """Set print speed mode (1=silent, 2=normal, 3=fast)."""
+        return self.send_command("print", "update", {
+            "settings": {"print_speed_mode": mode},
+            "taskid": "-1",
+        })
+
+    def command_list_files(self, path: str = "", timeout: float = 10.0) -> list[dict]:
+        """List files stored on the printer. Blocks until response."""
+        if not self._client or not self._hs:
+            raise HandshakeError("Not connected — call connect() first")
+
+        topic = f"{_SLICER_PREFIX}/{self._hs.model_id}/{self._hs.device_id}/file"
+        report_topic = f"{_PREFIX}/printer/public/{self._hs.model_id}/{self._hs.device_id}/file/report"
+        msgid = uuid.uuid4().hex
+        body = json.dumps({
+            "type": "file",
+            "action": "listLocal",
+            "timestamp": int(time.time() * 1000),
+            "msgid": msgid,
+            "data": {"path": path},
+        })
+
+        result: dict = {}
+        event = threading.Event()
+
+        def handler(_client: mqtt.Client, _ud: object, msg: mqtt.MQTTMessage) -> None:
+            if msg.topic == report_topic:
+                result.update(json.loads(msg.payload))
+                event.set()
+
+        old_handler = self._client.on_message
+        self._client.on_message = handler
+        self._client.publish(topic, body)
+        event.wait(timeout)
+        self._client.on_message = old_handler
+
+        data = result.get("data", {})
+        return data.get("file_list", [])
 
     # -- internals -----------------------------------------------------------
 

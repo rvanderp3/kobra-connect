@@ -45,19 +45,37 @@ class KobraCommandHandler(IPlatformCommandHandler):
     def GetConnectionInfo(self) -> ConnectionInfo:
         return ConnectionInfo(uri=f"lan://{self._client.host}")
 
-    # -- control commands (not supported in MVP) -----------------------------
+    # -- control commands --------------------------------------------------------
 
     def ExecutePause(self, *args: Any, **kwargs: Any) -> CommandResponse:
-        return _NOT_SUPPORTED
+        try:
+            self._client.command_pause()
+            return CommandResponse(ok=True, message="Paused")
+        except Exception as e:
+            return CommandResponse(ok=False, message=str(e))
 
     def ExecuteResume(self) -> CommandResponse:
-        return _NOT_SUPPORTED
+        try:
+            self._client.command_resume()
+            return CommandResponse(ok=True, message="Resumed")
+        except Exception as e:
+            return CommandResponse(ok=False, message=str(e))
 
     def ExecuteCancel(self) -> CommandResponse:
-        return _NOT_SUPPORTED
+        try:
+            self._client.command_cancel()
+            return CommandResponse(ok=True, message="Cancelled")
+        except Exception as e:
+            return CommandResponse(ok=False, message=str(e))
 
     def ExecuteStart(self, args: Optional[Dict[str, Any]]) -> CommandResponse:
-        return _NOT_SUPPORTED
+        if not args or "filename" not in args:
+            return CommandResponse(ok=False, message="No filename provided")
+        try:
+            self._client.command_start_print(args["filename"])
+            return CommandResponse(ok=True, message="Started")
+        except Exception as e:
+            return CommandResponse(ok=False, message=str(e))
 
     def ExecuteSetLight(self, lightName: str, on: bool) -> CommandResponse:
         return _NOT_SUPPORTED
@@ -73,14 +91,22 @@ class KobraCommandHandler(IPlatformCommandHandler):
 
     def ExecuteSetTemp(self, bedC: Optional[float], chamberC: Optional[float],
                        toolC: Optional[float], toolNumber: Optional[int]) -> CommandResponse:
-        return _NOT_SUPPORTED
+        try:
+            self._client.command_set_temperature(nozzle=toolC, bed=bedC)
+            return CommandResponse(ok=True, message="Temperature updated")
+        except Exception as e:
+            return CommandResponse(ok=False, message=str(e))
 
     def ExecuteSendCommand(self, transportType: str, request: Dict[str, Any],
                            rawPayload: Dict[str, Any]) -> CommandResponse:
         return _NOT_SUPPORTED
 
     def ExecuteFileList(self, args: Optional[Dict[str, Any]]) -> CommandResponse:
-        return _NOT_SUPPORTED
+        try:
+            files = self._client.command_list_files()
+            return CommandResponse(ok=True, message=str(files))
+        except Exception as e:
+            return CommandResponse(ok=False, message=str(e))
 
     def ExecuteFileUpload(self, args: Optional[Dict[str, Any]],
                           uploadBody: UploadBody) -> CommandResponse:
