@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  kobra-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile.bridge
+    container_name: kobra-moonraker-bridge
+    restart: unless-stopped
+    environment:
+      - KOBRA_IP=192.168.0.71
+      - KOBRA_PORT=7125
+      - LOG_LEVEL=INFO
+    ports:
+      - "7125:7125"
+    networks:
+      - kobra-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7125/server/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  octoeverywhere:
+    image: octoeverywhere/octoeverywhere:latest
+    container_name: octoeverywhere-kobra
+    restart: unless-stopped
+    environment:
+      - COMPANION_MODE=klipper
+      - PRINTER_IP=kobra-bridge
+      - MOONRAKER_PORT=7125
+      - WEBSERVER_PORT=80
+      - TZ=UTC
+    volumes:
+      - ./oe-data:/data
+    ports:
+      - "8080:80"
+    networks:
+      - kobra-net
+    depends_on:
+      kobra-bridge:
+        condition: service_healthy
+
+networks:
+  kobra-net:
+    driver: bridge

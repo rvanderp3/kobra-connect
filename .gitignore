@@ -1,0 +1,27 @@
+# Secrets and credentials
+*.secrets
+
+# OE runtime data
+oe-data/
+data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Context-mode / memsearch
+.memsearch/
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

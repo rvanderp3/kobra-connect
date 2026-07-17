@@ -1,0 +1,12 @@
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.memsearch
+*.secrets
+.git
+.gitignore
+README.md
+compose.yaml
+Dockerfile.bridge
+.octoprint-everywhere
