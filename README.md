@@ -2,13 +2,14 @@
 
 Local LAN API client for Anycubic Kobra 3 / S1 series 3D printers.
 
-Connects directly to your printer over the local network — no cloud services required. Performs the signed MQTT handshake, establishes a mutual-TLS connection, and exposes blocking query methods for temperature, fan speed, printer info, and more.
+Connects directly to your printer over the local network — no cloud services required, no custom firmware needed. Performs the signed MQTT handshake, establishes a mutual-TLS connection, and exposes blocking query methods for temperature, fan speed, printer info, and more.
 
 ## Requirements
 
 - Python >=3.9
 - Printer must be in **LAN mode** (not cloud mode)
 - Both machines on the same network
+- **Stock firmware** — no custom firmware, rooted printer, or Anycubic cloud services required
 
 ## Installation
 
@@ -188,7 +189,7 @@ Properties: `is_printing -> bool`, `is_paused -> bool`
 2. **MQTT connect** — Connects to the printer's local MQTT broker using mutual TLS (device cert + key).
 3. **Query/response** — Publishes a query message to a topic and blocks until the printer responds on the corresponding report topic.
 
-All communication is local — no Anycubic cloud services are involved.
+All communication is local — no Anycubic cloud services are involved. Works out of the box with **stock Anycubic firmware** (Kobra 3 / S1 series).
 
 ## Development
 
