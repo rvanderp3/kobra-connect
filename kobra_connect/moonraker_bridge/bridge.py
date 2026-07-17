@@ -190,6 +190,8 @@ class KobraMoonrakerBridge:
     def _start_server(self) -> None:
         """Start the aiohttp server in background thread."""
         self._app = web.Application()
+        # Root redirect — OE opens / to reach the "Klipper" web UI
+        self._app.router.add_get("/", self._handle_root)
         self._app.router.add_get("/websocket", self._handle_websocket)
         # Printer object endpoints
         self._app.router.add_post("/printer/objects/query", self._handle_query)
@@ -247,6 +249,27 @@ class KobraMoonrakerBridge:
         time.sleep(0.5)
 
     # -- WebSocket Handler -----------------------------------------------------
+
+    async def _handle_root(self, request: web.Request) -> web.Response:
+        """Root endpoint — OE opens this to reach the 'Klipper' web UI."""
+        return web.Response(
+            text="""<!DOCTYPE html>
+<html><head><title>Kobra Connect</title></head>
+<body style="font-family:system-ui;max-width:600px;margin:40px auto;padding:0 20px">
+<h2>Kobra Moonraker Bridge</h2>
+<p>Printer is connected and the Moonraker API is running.</p>
+<h3>Connect Fluidd</h3>
+<p>Point <a href="https://docs.fluidd.xyz/installation/">Fluidd</a> at this address:</p>
+<pre>http://&lt;this-host&gt;:7125</pre>
+<h3>API</h3>
+<ul>
+<li><a href="/server/info">/server/info</a></li>
+<li><a href="/printer/info">/printer/info</a></li>
+<li><a href="/printer/objects/list">/printer/objects/list</a></li>
+</ul>
+</body></html>""",
+            content_type="text/html",
+        )
 
     async def _handle_websocket(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(heartbeat=WS_HEARTBEAT_INTERVAL)
