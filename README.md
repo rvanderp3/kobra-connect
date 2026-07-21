@@ -358,6 +358,17 @@ This runs three containers:
 - `kobra-nginx` — Nginx reverse proxy on port 8080 (host network)
 - `octoeverywhere-kobra` — OE companion (host network, connects to bridge at 127.0.0.1:7125)
 
+**Configuration (via environment variables or Makefile defaults):**
+- `KOBRA_IP` — Printer IP (default: 192.168.0.71)
+- `WEBCAM_URL` — Webcam URL (default: http://192.168.0.35)
+- `OE_DATA_DIR` — OctoEverywhere data dir (default: `~/oe-data`)
+- `OE_DATA_DIR_BAMBU` — Bambu OE data dir (default: `~/oe-data-bambu`)
+
+Override at runtime:
+```bash
+make start KOBRA_IP=192.168.1.50
+```
+
 ### Backup & Restore
 
 ```bash
