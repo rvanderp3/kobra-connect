@@ -2,8 +2,8 @@
 
 KOBRA_IP ?= 192.168.0.71
 WEBCAM_URL ?= http://192.168.0.35
-OE_DATA_DIR ?= /Users/rvanderp/oe-data
-OE_DATA_DIR_BAMBU ?= /Users/rvanderp/oe-data-bambu
+OE_DATA_DIR ?= $(HOME)/oe-data
+OE_DATA_DIR_BAMBU ?= $(HOME)/oe-data-bambu
 BAMBU_ACCESS_CODE ?=
 BAMBU_SERIAL ?=
 BAMBU_IP ?=
